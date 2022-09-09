@@ -1,7 +1,7 @@
-const mysql = require("mysql2");
-const inquirer = require("inquirer");
-const consoleTable = require("console.table");
-const promisesql = require("promise-mysql");
+const mysql = require('mysql2');
+const inquirer = require('inquirer');
+const consoleTable = require('console.table');
+const promisesql = require('promise-mysql');
 
 // Connection info
 const connectionInfo =
@@ -38,8 +38,8 @@ async function mainMenu() {
                 'Add a department',
                 'Add a role',
                 'Add an employee',
-                "Update an employee role",
-                "Quit",
+                'Update an employee role',
+                'Quit',
             ]
         })
         // calls function to open subMenu based on user selection
@@ -51,35 +51,35 @@ async function mainMenu() {
 
 const subMenus = (selection) => {
     switch (selection.startingQ) {
-        case "View all departments":
+        case 'View all departments':
             viewAllDepartments()
             break;
 
-        case "View all employees":
+        case 'View all employees':
             viewAllEmployees()
             break;
 
-        case "View all roles":
+        case 'View all roles':
             viewAllRoles()
             break;
 
-        case "Add a department":
+        case 'Add a department':
             addDepartment()
             break;
 
-        case "Add a role":
+        case 'Add a role':
             addRole()
             break;
 
-        case "Add an employee":
+        case 'Add an employee':
             addEmployee()
             break;
 
-        case "Update an employee role":
+        case 'Update an employee role':
             updateEmployeeRole()
             break;
 
-        case "Quit":
+        case 'Quit':
             quitEmployeeTracker()
             break;
     };
@@ -99,7 +99,11 @@ function viewAllDepartments() {
 
 // View employees function
 function viewAllEmployees() {
-    let viewEmployees = `SELECT * FROM employee`
+    let viewEmployees = `
+    SELECT employee.id, employee.first_name, employee.last_name, roles.title, roles.salary, department.department_name, manager.first_name AS acting_manager FROM employee AS employee
+    INNER JOIN roles ON employee.role_id=roles.id 
+    INNER JOIN department ON roles.department_id=department.id
+    INNER JOIN employee AS manager ON employee.manager_id=manager.id`
     db.query(viewEmployees, (err, results) => {
         if (err) throw err;
 
@@ -111,7 +115,9 @@ function viewAllEmployees() {
 
 // View roles function
 function viewAllRoles() {
-    let viewRoles = `SELECT * FROM roles`
+    let viewRoles = `
+    SELECT roles.id, roles.title, roles.salary, department.department_name FROM roles
+    INNER JOIN department ON roles.department_id=department.id`
     db.query(viewRoles, (err, results) => {
         if (err) throw err;
 
@@ -154,40 +160,32 @@ function addDepartment() {
 
 // Add new role function
 function addRole() {
-    // Create array of departments
+    // Array for departments
     let departmentArr = [];
 
-    // Create connection using promise-sql
+    // Creates connection using promise-sql
     promisesql.createConnection(connectionInfo)
         .then((connect) => {
-
-            // Query all departments
             return connect.query('SELECT id, department_name FROM department');
-
         })
         .then((departments) => {
-
             // Place all departments in array
             for (i = 0; i < departments.length; i++) {
                 departmentArr.push(departments[i].department_name);
             }
-
             return departments;
         })
         .then((departments) => {
-
             inquirer.prompt([
                 {
-                    // Prompt user role title
-                    name: "rolename",
-                    type: "input",
-                    message: "What is the name of this role?"
+                    name: 'rolename',
+                    type: 'input',
+                    message: 'What is the name of this role?'
                 },
                 {
-                    // Prompt user for salary
-                    name: "salary",
-                    type: "input",
-                    message: "What is the salary for this role?",
+                    name: 'salary',
+                    type: 'input',
+                    message: 'What is the salary for this role?',
                     validate: input => {
                         if (isNaN(input)) {
                             console.log('You must enter a valid salary');
@@ -198,19 +196,18 @@ function addRole() {
                     }
                 },
                 {
-                    // Department that role belongs to
-                    name: "dept",
-                    type: "list",
-                    message: "Which department does this role belong to?",
+                    name: 'dept',
+                    type: 'list',
+                    message: 'Which department does this role belong to?',
                     choices: departmentArr
                 }
             ])
                 .then((input) => {
 
-                    // Set department ID variable
+                    // Sets department Id variable
                     let deptId;
 
-                    // get id of department selected
+                    // gets id of department selected
                     for (i = 0; i < departments.length; i++) {
                         if (input.dept == departments[i].department_name) {
                             deptId = departments[i].id;
@@ -240,24 +237,21 @@ function addEmployee() {
     // Create connection using promise-sql
     promisesql.createConnection(connectionInfo)
         .then((connect) => {
-
-            // Query all roles and all manager and pass as a promise
+            // Query all roles and all managers and pass as a promise
             return Promise.all([
                 connect.query('SELECT id, title FROM roles ORDER BY title ASC'),
                 connect.query("SELECT employee.id, concat(employee.first_name, ' ' ,  employee.last_name) AS Employee FROM employee ORDER BY Employee ASC")
             ]);
-        }).then(([roles, managers]) => {
 
-            // Place all roles in array
+        }).then(([roles, managers]) => {
+            // Roles array
             for (i = 0; i < roles.length; i++) {
                 roleArr.push(roles[i].title);
             }
-
-            // place all managers in array
+            // Managers array
             for (i = 0; i < managers.length; i++) {
                 managerArr.push(managers[i].Employee);
             }
-
             return Promise.all([roles, managers]);
         })
         .then(([roles, managers]) => {
@@ -293,46 +287,41 @@ function addEmployee() {
                     }
                 },
                 {
-                    // Prompt user of their role
-                    name: "role",
-                    type: "list",
-                    message: "What is their role?",
+                    name: 'role',
+                    type: 'list',
+                    message: 'What is their role?',
                     choices: roleArr
                 },
                 {
-                    // Prompt user for manager
-                    name: "manager",
-                    type: "list",
-                    message: "Who is their manager?",
+                    name: 'manager',
+                    type: 'list',
+                    message: 'Who is their manager?',
                     choices: managerArr
                 }
             ])
                 .then((input) => {
-                    // Set variable for IDs
+                    // Set variable for Ids
                     let roleId;
                     // Default Manager value as null
                     let managerId = null;
 
-                    // Get ID of role selected
+                    // Gets selected role id
                     for (i = 0; i < roles.length; i++) {
                         if (input.role == roles[i].title) {
                             roleId = roles[i].id;
                         }
                     }
 
-                    // get ID of manager selected
+                    // Gets selected manager id
                     for (i = 0; i < managers.length; i++) {
                         if (input.manager == managers[i].Employee) {
                             managerId = managers[i].id;
                         }
                     }
-
                     // Add employee
                     db.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id)
                  VALUES ("${input.first_name}", "${input.last_name}", ${roleId}, ${managerId})`, (err, res) => {
                         if (err) return err;
-
-                        // Confirm employee has been added
                         console.log(`\n ${input.first_name} ${input.last_name} has been added to database! \n `);
                         mainMenu();
                     }
@@ -344,7 +333,7 @@ function addEmployee() {
 // Update employee role function
 function updateEmployeeRole() {
 
-    // create employee and role array
+    // Employee and role arrays
     let employeeArr = [];
     let roleArr = [];
 
@@ -353,21 +342,20 @@ function updateEmployeeRole() {
         .then((connect) => {
             return Promise.all([
 
-                // query all roles and employee
+                // Query all roles and employee
                 connect.query('SELECT id, title FROM roles ORDER BY title ASC'),
                 connect.query("SELECT employee.id, concat(employee.first_name, ' ' ,  employee.last_name) AS Employee FROM employee ORDER BY Employee ASC")
             ]);
         }).then(([roles, employees]) => {
 
-            // place all roles in array
+            // Roles array
             for (i = 0; i < roles.length; i++) {
                 roleArr.push(roles[i].title);
             }
 
-            // place all empoyees in array
+            // Employees array
             for (i = 0; i < employees.length; i++) {
                 employeeArr.push(employees[i].Employee);
-                //console.log(value[i].name);
             }
 
             return Promise.all([roles, employees]);
@@ -375,16 +363,14 @@ function updateEmployeeRole() {
 
             inquirer.prompt([
                 {
-                    // prompt user to select employee
-                    name: "employee",
-                    type: "list",
-                    message: "Who would you like to edit?",
+                    name: 'employee',
+                    type: 'list',
+                    message: 'Who would you like to edit?',
                     choices: employeeArr
                 }, {
-                    // Select role to update employee
-                    name: "role",
-                    type: "list",
-                    message: "What is their new role?",
+                    name: 'role',
+                    type: 'list',
+                    message: 'What is their new role?',
                     choices: roleArr
                 },
             ])
@@ -393,21 +379,21 @@ function updateEmployeeRole() {
                     let roleId;
                     let employeeId;
 
-                    /// get ID of role selected
+                    // Gets selected role id
                     for (i = 0; i < roles.length; i++) {
                         if (input.role == roles[i].title) {
                             roleId = roles[i].id;
                         }
                     }
 
-                    // get ID of employee selected
+                    // Gets selected employee id
                     for (i = 0; i < employees.length; i++) {
                         if (input.employee == employees[i].Employee) {
                             employeeId = employees[i].id;
                         }
                     }
 
-                    // update employee with new role
+                    // Update employee with new role
                     db.query(`UPDATE employee SET role_id = ${roleId} WHERE id = ${employeeId}`, (err, res) => {
                         if (err) return err;
                         console.log(`\n ${input.employee}'s role has been updated in database! \n `);
